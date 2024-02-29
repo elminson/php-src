@@ -40,6 +40,8 @@ ZEND_API void *zend_stack_top(const zend_stack *stack);
 ZEND_API void zend_stack_del_top(zend_stack *stack);
 ZEND_API int zend_stack_int_top(const zend_stack *stack);
 ZEND_API bool zend_stack_is_empty(const zend_stack *stack);
+ZEND_API bool zend_stack_all_empty(const zend_stack *stack);
+ZEND_API bool zend_stack_any_empty(const zend_stack *stack);
 ZEND_API void zend_stack_destroy(zend_stack *stack);
 ZEND_API void *zend_stack_base(const zend_stack *stack);
 ZEND_API int zend_stack_count(const zend_stack *stack);
