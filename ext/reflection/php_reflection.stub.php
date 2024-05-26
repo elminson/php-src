@@ -554,6 +554,8 @@ class ReflectionClassConstant implements Reflector
 
     public function isEnumCase(): bool {}
 
+    public function isDeprecated(): bool {}
+
     public function hasType(): bool {}
 
     public function getType(): ?ReflectionType {}
@@ -764,6 +766,8 @@ class ReflectionAttribute implements Reflector
     /** @cvalue REFLECTION_ATTRIBUTE_IS_INSTANCEOF */
     public const int IS_INSTANCEOF = UNKNOWN;
 
+    public string $name;
+
     public function getName(): string {}
     public function getTarget(): int {}
     public function isRepeated(): bool {}
@@ -798,10 +802,7 @@ class ReflectionEnumUnitCase extends ReflectionClassConstant
 
     public function getEnum(): ReflectionEnum {}
 
-    /**
-     * @implementation-alias ReflectionClassConstant::getValue
-     * @no-verify
-     */
+    /** @implementation-alias ReflectionClassConstant::getValue */
     public function getValue(): UnitEnum {}
 }
 
@@ -826,4 +827,27 @@ final class ReflectionFiber
     public function getCallable(): callable {}
 
     public function getTrace(int $options = DEBUG_BACKTRACE_PROVIDE_OBJECT): array {}
+}
+
+/**
+ * @strict-properties
+ * @not-serializable
+ */
+final class ReflectionConstant implements Reflector
+{
+    public string $name;
+
+    public function __construct(string $name) {}
+
+    public function getName(): string {}
+
+    public function getNamespaceName(): string {}
+
+    public function getShortName(): string {}
+
+    public function getValue(): mixed {}
+
+    public function isDeprecated(): bool {}
+
+    public function __toString(): string {}
 }

@@ -269,8 +269,17 @@ static zend_always_inline size_t zend_strnlen(const char* s, size_t maxlen)
 #if defined(HAVE_STRNLEN)
 	return strnlen(s, maxlen);
 #else
-	const char *p = memchr(s, '\0', maxlen);
+	const char *p = (const char *)memchr(s, '\0', maxlen);
 	return p ? p-s : maxlen;
+#endif
+}
+
+static zend_always_inline void *zend_mempcpy(void *dest, const void *src, size_t n)
+{
+#if defined(HAVE_MEMPCPY)
+	return mempcpy(dest, src, n);
+#else
+	return (char *)memcpy(dest, src, n) + n;
 #endif
 }
 
@@ -363,7 +372,7 @@ static zend_always_inline bool try_convert_to_string(zval *op) {
 #define convert_to_string(op) if (Z_TYPE_P(op) != IS_STRING) { _convert_to_string((op)); }
 
 
-ZEND_API int ZEND_FASTCALL zend_is_true(const zval *op);
+ZEND_API bool ZEND_FASTCALL zend_is_true(const zval *op);
 ZEND_API bool ZEND_FASTCALL zend_object_is_true(const zval *op);
 
 #define zval_is_true(op) \

@@ -23,6 +23,7 @@ static uint32_t ir_str_hash(const char *str, size_t len)
 
     for (i = 0; i < len; i++) {
         h = ((h << 5) + h) + *str;
+        str++;
     }
     return h | 0x10000000;
 }
@@ -71,15 +72,15 @@ static void ir_strtab_resize(ir_strtab *strtab)
 
 static void ir_strtab_grow_buf(ir_strtab *strtab, uint32_t len)
 {
-	size_t old = (size_t)strtab->buf;
+	intptr_t old = (intptr_t)strtab->buf;
 
 	do {
 		strtab->buf_size *= 2;
 	} while (UNEXPECTED(strtab->buf_size - strtab->buf_top < len + 1));
 
 	strtab->buf = ir_mem_realloc(strtab->buf, strtab->buf_size);
-	if ((size_t)strtab->buf != old) {
-		size_t offset = (size_t)strtab->buf - old;
+	if ((intptr_t)strtab->buf != old) {
+		intptr_t offset = (intptr_t)strtab->buf - old;
 		ir_strtab_bucket *p = (ir_strtab_bucket*)strtab->data;
 		uint32_t i;
 		for (i = strtab->count; i > 0; i--) {

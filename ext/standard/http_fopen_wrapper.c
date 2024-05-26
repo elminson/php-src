@@ -136,7 +136,7 @@ static php_stream *php_stream_url_wrap_http_ex(php_stream_wrapper *wrapper,
 	zend_string *transport_string;
 	zend_string *errstr = NULL;
 	int have_header = 0;
-	bool request_fulluri = 0, ignore_errors = 0;
+	bool request_fulluri = false, ignore_errors = false;
 	struct timeval timeout;
 	char *user_headers = NULL;
 	int header_init = ((flags & HTTP_WRAPPER_HEADER_INIT) != 0);
@@ -171,7 +171,7 @@ static php_stream *php_stream_url_wrap_http_ex(php_stream_wrapper *wrapper,
 			return php_stream_open_wrapper_ex(path, mode, REPORT_ERRORS, NULL, context);
 		}
 		/* Called from a non-http wrapper with http proxying requested (i.e. ftp) */
-		request_fulluri = 1;
+		request_fulluri = true;
 		use_ssl = 0;
 		use_proxy = 1;
 		transport_string = zend_string_copy(Z_STR_P(tmpzval));
@@ -801,7 +801,7 @@ finish:
 
 				/* create filter to decode response body */
 				if (!(options & STREAM_ONLY_GET_HEADERS)) {
-					zend_long decode = 1;
+					bool decode = true;
 
 					if (context && (tmpzval = php_stream_context_get_option(context, "http", "auto_decode")) != NULL) {
 						decode = zend_is_true(tmpzval);
@@ -982,13 +982,19 @@ php_stream *php_stream_url_wrap_http(php_stream_wrapper *wrapper, const char *pa
 {
 	php_stream *stream;
 	zval headers;
+
 	ZVAL_UNDEF(&headers);
+
+	zval_ptr_dtor(&BG(last_http_headers));
+	ZVAL_UNDEF(&BG(last_http_headers));
 
 	stream = php_stream_url_wrap_http_ex(
 		wrapper, path, mode, options, opened_path, context,
 		PHP_URL_REDIRECT_MAX, HTTP_WRAPPER_HEADER_INIT, &headers STREAMS_CC);
 
 	if (!Z_ISUNDEF(headers)) {
+		ZVAL_COPY(&BG(last_http_headers), &headers);
+
 		if (FAILURE == zend_set_local_var_str(
 				"http_response_header", sizeof("http_response_header")-1, &headers, 0)) {
 			zval_ptr_dtor(&headers);

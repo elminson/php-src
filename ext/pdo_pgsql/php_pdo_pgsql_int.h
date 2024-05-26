@@ -46,6 +46,7 @@ typedef struct {
 	bool		disable_native_prepares; /* deprecated since 5.6 */
 	bool		disable_prepares;
 	HashTable       *lob_streams;
+	zend_fcall_info_cache *notice_callback;
 } pdo_pgsql_db_handle;
 
 typedef struct {
@@ -86,6 +87,7 @@ extern const struct pdo_stmt_methods pgsql_stmt_methods;
 
 enum {
 	PDO_PGSQL_ATTR_DISABLE_PREPARES = PDO_ATTR_DRIVER_SPECIFIC,
+	PDO_PGSQL_ATTR_RESULT_MEMORY_SIZE,
 };
 
 struct pdo_pgsql_lob_self {
@@ -108,5 +110,15 @@ extern const php_stream_ops pdo_pgsql_lob_stream_ops;
 
 void pdo_libpq_version(char *buf, size_t len);
 void pdo_pgsql_close_lob_streams(pdo_dbh_t *dbh);
+
+void pgsqlCopyFromArray_internal(INTERNAL_FUNCTION_PARAMETERS);
+void pgsqlCopyFromFile_internal(INTERNAL_FUNCTION_PARAMETERS);
+void pgsqlCopyToArray_internal(INTERNAL_FUNCTION_PARAMETERS);
+void pgsqlCopyToFile_internal(INTERNAL_FUNCTION_PARAMETERS);
+void pgsqlLOBCreate_internal(INTERNAL_FUNCTION_PARAMETERS);
+void pgsqlLOBOpen_internal(INTERNAL_FUNCTION_PARAMETERS);
+void pgsqlLOBUnlink_internal(INTERNAL_FUNCTION_PARAMETERS);
+void pgsqlGetNotify_internal(INTERNAL_FUNCTION_PARAMETERS);
+void pgsqlGetPid_internal(INTERNAL_FUNCTION_PARAMETERS);
 
 #endif /* PHP_PDO_PGSQL_INT_H */

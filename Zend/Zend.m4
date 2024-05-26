@@ -21,6 +21,7 @@ AC_DEFUN([ZEND_CHECK_FLOAT_PRECISION],[
     _FPU_SETCW(fpu_cw);
     result = a / b;
     _FPU_SETCW(fpu_oldcw);
+    (void)result;
   ]])],[ac_cfp_have__fpu_setcw=yes],[ac_cfp_have__fpu_setcw=no])
   if test "$ac_cfp_have__fpu_setcw" = "yes" ; then
     AC_DEFINE(HAVE__FPU_SETCW, 1, [whether _FPU_SETCW is present and usable])
@@ -42,6 +43,7 @@ AC_DEFUN([ZEND_CHECK_FLOAT_PRECISION],[
     fpsetprec(FP_PD);
     result = a / b;
     fpsetprec(fpu_oldprec);
+    (void)result;
   ]])], [ac_cfp_have_fpsetprec=yes], [ac_cfp_have_fpsetprec=no])
   if test "$ac_cfp_have_fpsetprec" = "yes" ; then
     AC_DEFINE(HAVE_FPSETPREC, 1, [whether fpsetprec is present and usable])
@@ -63,6 +65,7 @@ AC_DEFUN([ZEND_CHECK_FLOAT_PRECISION],[
     _controlfp(_PC_53, _MCW_PC);
     result = a / b;
     _controlfp(fpu_oldcw, _MCW_PC);
+    (void)result;
   ]])], [ac_cfp_have__controlfp=yes], [ac_cfp_have__controlfp=no])
   if test "$ac_cfp_have__controlfp" = "yes" ; then
     AC_DEFINE(HAVE__CONTROLFP, 1, [whether _controlfp is present usable])
@@ -85,6 +88,7 @@ AC_DEFUN([ZEND_CHECK_FLOAT_PRECISION],[
     _controlfp_s(&fpu_cw, _PC_53, _MCW_PC);
     result = a / b;
     _controlfp_s(&fpu_cw, fpu_oldcw, _MCW_PC);
+    (void)result;
   ]])], [ac_cfp_have__controlfp_s=yes], [ac_cfp_have__controlfp_s=no])
   if test "$ac_cfp_have__controlfp_s" = "yes" ; then
     AC_DEFINE(HAVE__CONTROLFP_S, 1, [whether _controlfp_s is present and usable])
@@ -105,10 +109,9 @@ AC_DEFUN([ZEND_CHECK_FLOAT_PRECISION],[
     __asm__ __volatile__ ("fnstcw %0" : "=m" (*&oldcw));
     cw = (oldcw & ~0x0 & ~0x300) | 0x200;
     __asm__ __volatile__ ("fldcw %0" : : "m" (*&cw));
-
     result = a / b;
-
     __asm__ __volatile__ ("fldcw %0" : : "m" (*&oldcw));
+    (void)result;
   ]])], [ac_cfp_have_fpu_inline_asm_x86=yes], [ac_cfp_have_fpu_inline_asm_x86=no])
   if test "$ac_cfp_have_fpu_inline_asm_x86" = "yes" ; then
     AC_DEFINE(HAVE_FPU_INLINE_ASM_X86, 1, [whether FPU control word can be manipulated by inline assembler])
@@ -151,7 +154,7 @@ AC_CHECK_FUNCS(getpid kill pthread_getattr_np pthread_attr_get_np pthread_get_st
 dnl Check for sigsetjmp. If it's defined as a macro, AC_CHECK_FUNCS won't work.
 AC_CHECK_FUNCS([sigsetjmp],,
   [AC_CHECK_DECL([sigsetjmp],
-    [AC_DEFINE([HAVE_SIGSETJMP],[1],[Define to 1 if you have the 'sigsetjmp' function.])],,
+    [AC_DEFINE([HAVE_SIGSETJMP], [1])],,
     [#include <setjmp.h>])])
 
 dnl Test whether the stack grows downwards
@@ -223,16 +226,6 @@ test -n "$DEBUG_CFLAGS" && CFLAGS="$CFLAGS $DEBUG_CFLAGS"
 if test "$ZEND_ZTS" = "yes"; then
   AC_DEFINE(ZTS,1,[ ])
   CFLAGS="$CFLAGS -DZTS"
-fi
-
-AC_C_INLINE
-
-AC_MSG_CHECKING(target system is Darwin)
-if echo "$target" | grep "darwin" > /dev/null; then
-  AC_DEFINE([DARWIN], 1, [Define if the target system is darwin])
-  AC_MSG_RESULT(yes)
-else
-  AC_MSG_RESULT(no)
 fi
 
 dnl Test and set the alignment define for ZEND_MM. This also does the
@@ -314,7 +307,7 @@ AC_ARG_ENABLE([zend-max-execution-timers],
     [ZEND_MAX_EXECUTION_TIMERS=$enableval],
     [ZEND_MAX_EXECUTION_TIMERS=$ZEND_ZTS])
 
-AS_CASE(["$host_alias"], [*linux*], [], [ZEND_MAX_EXECUTION_TIMERS='no'])
+AS_CASE(["$host_alias"], [*linux*|*freebsd*], [], [ZEND_MAX_EXECUTION_TIMERS='no'])
 
 PHP_CHECK_FUNC(timer_create, rt)
 if test "$ac_cv_func_timer_create" != "yes"; then

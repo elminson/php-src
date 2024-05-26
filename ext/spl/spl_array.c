@@ -34,12 +34,12 @@
 #include "spl_exceptions.h"
 
 /* Defined later in the file */
-zend_object_handlers spl_handler_ArrayIterator;
+static zend_object_handlers spl_handler_ArrayIterator;
 PHPAPI zend_class_entry  *spl_ce_ArrayIterator;
 PHPAPI zend_class_entry  *spl_ce_RecursiveArrayIterator;
 
 /* ArrayObject class */
-zend_object_handlers spl_handler_ArrayObject;
+static zend_object_handlers spl_handler_ArrayObject;
 PHPAPI zend_class_entry  *spl_ce_ArrayObject;
 
 typedef struct _spl_array_object {
@@ -1544,7 +1544,7 @@ static void spl_array_it_dtor(zend_object_iterator *iter) /* {{{ */
 }
 /* }}} */
 
-static int spl_array_it_valid(zend_object_iterator *iter) /* {{{ */
+static zend_result spl_array_it_valid(zend_object_iterator *iter) /* {{{ */
 {
 	spl_array_object *object = Z_SPLARRAY_P(&iter->data);
 	HashTable *aht = spl_array_get_hash_table(object);

@@ -638,6 +638,16 @@ zend_jit_trace_stop ZEND_FASTCALL zend_jit_trace_execute(zend_execute_data *ex, 
 		return ZEND_JIT_TRACE_STOP_EXCEPTION;
 	}
 
+	trace_flags = ZEND_OP_TRACE_INFO(opline, offset)->trace_flags;
+	if (trace_flags & ZEND_JIT_TRACE_UNSUPPORTED) {
+		TRACE_END(ZEND_JIT_TRACE_END, ZEND_JIT_TRACE_STOP_NOT_SUPPORTED, opline);
+#ifdef HAVE_GCC_GLOBAL_REGS
+		execute_data = save_execute_data;
+		opline = save_opline;
+#endif
+		return ZEND_JIT_TRACE_STOP_NOT_SUPPORTED;
+	}
+
 	if (prev_call) {
 		int ret = zend_jit_trace_record_fake_init_call(prev_call, trace_buffer, idx, is_megamorphic);
 		if (ret < 0) {
@@ -682,6 +692,12 @@ zend_jit_trace_stop ZEND_FASTCALL zend_jit_trace_execute(zend_execute_data *ex, 
 				}
 			}
 			op1_type |= flags;
+		} else if (opline->op1_type == IS_UNUSED && (op_array->fn_flags & ZEND_ACC_CLOSURE)) {
+			uint32_t op1_flags = ZEND_VM_OP1_FLAGS(zend_get_opcode_flags(opline->opcode));
+			if ((op1_flags & ZEND_VM_OP_MASK) == ZEND_VM_OP_THIS) {
+				op1_type = IS_OBJECT;
+				ce1 = Z_OBJCE(EX(This));
+			}
 		}
 		if (opline->op2_type & (IS_TMP_VAR|IS_VAR|IS_CV)
 		 && opline->opcode != ZEND_INSTANCEOF

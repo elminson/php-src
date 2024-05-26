@@ -610,7 +610,6 @@ ZEND_API zval *zend_std_read_property(zend_object *zobj, zend_string *name, int 
 	uintptr_t property_offset;
 	const zend_property_info *prop_info = NULL;
 	uint32_t *guard = NULL;
-	zend_string *tmp_name = NULL;
 
 #if DEBUG_OBJECT_HANDLERS
 	fprintf(stderr, "Read object #%d property: %s\n", zobj->handle, ZSTR_VAL(name));
@@ -692,9 +691,6 @@ ZEND_API zval *zend_std_read_property(zend_object *zobj, zend_string *name, int 
 		guard = zend_get_property_guard(zobj, name);
 
 		if (!((*guard) & IN_ISSET)) {
-			if (!tmp_name && !ZSTR_IS_INTERNED(name)) {
-				tmp_name = zend_string_copy(name);
-			}
 			GC_ADDREF(zobj);
 			ZVAL_UNDEF(&tmp_result);
 
@@ -741,7 +737,7 @@ call_getter:
 				retval = &EG(uninitialized_zval);
 			}
 
-			if (UNEXPECTED(prop_info)) {
+			if (prop_info) {
 				zend_verify_prop_assignable_by_ref_ex(prop_info, retval, (zobj->ce->__get->common.fn_flags & ZEND_ACC_STRICT_TYPES) != 0, ZEND_VERIFY_PROP_ASSIGNABLE_BY_REF_CONTEXT_MAGIC_GET);
 			}
 
@@ -758,7 +754,7 @@ call_getter:
 
 uninit_error:
 	if (type != BP_VAR_IS) {
-		if (UNEXPECTED(prop_info)) {
+		if (prop_info) {
 			zend_throw_error(NULL, "Typed property %s::$%s must not be accessed before initialization",
 				ZSTR_VAL(prop_info->ce->name),
 				ZSTR_VAL(name));
@@ -769,8 +765,6 @@ uninit_error:
 	retval = &EG(uninitialized_zval);
 
 exit:
-	zend_tmp_string_release(tmp_name);
-
 	return retval;
 }
 /* }}} */
@@ -826,7 +820,7 @@ ZEND_API zval *zend_std_write_property(zend_object *zobj, zend_string *name, zva
 		if (Z_TYPE_P(variable_ptr) != IS_UNDEF) {
 			Z_TRY_ADDREF_P(value);
 
-			if (UNEXPECTED(prop_info)) {
+			if (prop_info) {
 				if (UNEXPECTED((prop_info->flags & ZEND_ACC_READONLY) && !(Z_PROP_FLAG_P(variable_ptr) & IS_PROP_REINITABLE))) {
 					Z_TRY_DELREF_P(value);
 					zend_readonly_property_modification_error(prop_info);
@@ -929,7 +923,7 @@ write_std_property:
 			variable_ptr = OBJ_PROP(zobj, property_offset);
 
 			Z_TRY_ADDREF_P(value);
-			if (UNEXPECTED(prop_info)) {
+			if (prop_info) {
 				if (UNEXPECTED((prop_info->flags & ZEND_ACC_READONLY)
 						&& !verify_readonly_initialization_access(prop_info, zobj->ce, name, "initialize"))) {
 					Z_TRY_DELREF_P(value);
@@ -1063,11 +1057,12 @@ ZEND_API void zend_std_write_dimension(zend_object *object, zval *offset, zval *
 }
 /* }}} */
 
+// todo: make zend_std_has_dimension return bool as well
 ZEND_API int zend_std_has_dimension(zend_object *object, zval *offset, int check_empty) /* {{{ */
 {
 	zend_class_entry *ce = object->ce;
 	zval retval, tmp_offset;
-	int result;
+	bool result;
 
 	zend_class_arrayaccess_funcs *funcs = ce->arrayaccess_funcs_ptr;
 	if (EXPECTED(funcs)) {
@@ -1087,6 +1082,7 @@ ZEND_API int zend_std_has_dimension(zend_object *object, zval *offset, int check
 	    zend_bad_array_access(ce);
 		return 0;
 	}
+
 	return result;
 }
 /* }}} */
@@ -1110,7 +1106,7 @@ ZEND_API zval *zend_std_get_property_ptr_ptr(zend_object *zobj, zend_string *nam
 			    UNEXPECTED((*zend_get_property_guard(zobj, name)) & IN_GET) ||
 			    UNEXPECTED(prop_info && (Z_PROP_FLAG_P(retval) & IS_PROP_UNINIT))) {
 				if (UNEXPECTED(type == BP_VAR_RW || type == BP_VAR_R)) {
-					if (UNEXPECTED(prop_info)) {
+					if (prop_info) {
 						zend_throw_error(NULL,
 							"Typed property %s::$%s must not be accessed before initialization",
 							ZSTR_VAL(prop_info->ce->name),
@@ -1816,13 +1812,13 @@ ZEND_API int zend_objects_not_comparable(zval *o1, zval *o2)
 	return ZEND_UNCOMPARABLE;
 }
 
+// todo: make zend_std_has_property return bool as well
 ZEND_API int zend_std_has_property(zend_object *zobj, zend_string *name, int has_set_exists, void **cache_slot) /* {{{ */
 {
-	int result;
+	bool result;
 	zval *value = NULL;
 	uintptr_t property_offset;
 	const zend_property_info *prop_info = NULL;
-	zend_string *tmp_name = NULL;
 
 	property_offset = zend_get_property_offset(zobj->ce, name, 1, cache_slot, &prop_info);
 
@@ -1833,7 +1829,7 @@ ZEND_API int zend_std_has_property(zend_object *zobj, zend_string *name, int has
 		}
 		if (UNEXPECTED(Z_PROP_FLAG_P(value) & IS_PROP_UNINIT)) {
 			/* Skip __isset() for uninitialized typed properties */
-			result = 0;
+			result = false;
 			goto exit;
 		}
 	} else if (EXPECTED(IS_DYNAMIC_PROPERTY_OFFSET(property_offset))) {
@@ -1869,17 +1865,17 @@ found:
 					result = (Z_TYPE_P(value) != IS_NULL);
 				} else {
 					ZEND_ASSERT(has_set_exists == ZEND_PROPERTY_EXISTS);
-					result = 1;
+					result = true;
 				}
 				goto exit;
 			}
 		}
 	} else if (UNEXPECTED(EG(exception))) {
-		result = 0;
+		result = false;
 		goto exit;
 	}
 
-	result = 0;
+	result = false;
 	if ((has_set_exists != ZEND_PROPERTY_EXISTS) && zobj->ce->__isset) {
 		uint32_t *guard = zend_get_property_guard(zobj, name);
 
@@ -1887,9 +1883,6 @@ found:
 			zval rv;
 
 			/* have issetter - try with it! */
-			if (!tmp_name && !ZSTR_IS_INTERNED(name)) {
-				tmp_name = zend_string_copy(name);
-			}
 			GC_ADDREF(zobj);
 			(*guard) |= IN_ISSET; /* prevent circular getting */
 			zend_std_call_issetter(zobj, name, &rv);
@@ -1903,7 +1896,7 @@ found:
 					result = i_zend_is_true(&rv);
 					zval_ptr_dtor(&rv);
 				} else {
-					result = 0;
+					result = false;
 				}
 			}
 			(*guard) &= ~IN_ISSET;
@@ -1912,7 +1905,6 @@ found:
 	}
 
 exit:
-	zend_tmp_string_release(tmp_name);
 	return result;
 }
 /* }}} */

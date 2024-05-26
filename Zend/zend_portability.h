@@ -141,7 +141,7 @@
 
 #if defined(HAVE_LIBDL) && !defined(ZEND_WIN32)
 
-# if __has_feature(address_sanitizer)
+# if __has_feature(address_sanitizer) && !defined(__SANITIZE_ADDRESS__)
 #  define __SANITIZE_ADDRESS__
 # endif
 
@@ -202,7 +202,7 @@ char *alloca();
 # endif
 #endif
 
-#if !ZEND_DEBUG && (defined(HAVE_ALLOCA) || (defined (__GNUC__) && __GNUC__ >= 2)) && !(defined(ZTS) && defined(HPUX)) && !defined(DARWIN)
+#if !ZEND_DEBUG && (defined(HAVE_ALLOCA) || (defined (__GNUC__) && __GNUC__ >= 2)) && !(defined(ZTS) && defined(HPUX)) && !defined(__APPLE__)
 # define ZEND_ALLOCA_MAX_SIZE (32 * 1024)
 # define ALLOCA_FLAG(name) \
 	bool name;
@@ -302,7 +302,7 @@ char *alloca();
 # define ZEND_FASTCALL
 #endif
 
-#if (defined(__GNUC__) && __GNUC__ >= 3 && !defined(__INTEL_COMPILER) && !defined(DARWIN) && !defined(__hpux) && !defined(_AIX) && !defined(__osf__)) || __has_attribute(noreturn)
+#if (defined(__GNUC__) && __GNUC__ >= 3 && !defined(__INTEL_COMPILER) && !defined(__APPLE__) && !defined(__hpux) && !defined(_AIX) && !defined(__osf__)) || __has_attribute(noreturn)
 # define HAVE_NORETURN
 # define ZEND_NORETURN __attribute__((noreturn))
 #elif defined(ZEND_WIN32)
@@ -318,7 +318,7 @@ char *alloca();
 # define ZEND_STACK_ALIGNED
 #endif
 
-#if (defined(__GNUC__) && __GNUC__ >= 3 && !defined(__INTEL_COMPILER) && !defined(DARWIN) && !defined(__hpux) && !defined(_AIX) && !defined(__osf__))
+#if (defined(__GNUC__) && __GNUC__ >= 3 && !defined(__INTEL_COMPILER) && !defined(__APPLE__) && !defined(__hpux) && !defined(_AIX) && !defined(__osf__))
 # define HAVE_NORETURN_ALIAS
 # define HAVE_ATTRIBUTE_WEAK
 #endif

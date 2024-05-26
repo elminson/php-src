@@ -46,7 +46,7 @@ int phpdbg_startup_run = 0;
 
 static bool phpdbg_booted = 0;
 static bool phpdbg_fully_started = 0;
-bool use_mm_wrappers = 1;
+static bool use_mm_wrappers = 1;
 
 static void php_phpdbg_destroy_bp_file(zval *brake) /* {{{ */
 {
@@ -491,8 +491,8 @@ PHP_FUNCTION(phpdbg_get_executable)
 {
 	HashTable *options = NULL;
 	zval *option_buffer;
-	bool by_function = 0;
-	bool by_opcode = 0;
+	bool by_function = false;
+	bool by_opcode = false;
 	HashTable *insert_ht;
 
 	zend_function *func;
@@ -592,8 +592,8 @@ PHP_FUNCTION(phpdbg_end_oplog)
 
 	HashTable *options = NULL;
 	zval *option_buffer;
-	bool by_function = 0;
-	bool by_opcode = 0;
+	bool by_function = false;
+	bool by_opcode = false;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "|H", &options) == FAILURE) {
 		RETURN_THROWS();
@@ -1046,7 +1046,7 @@ static inline void phpdbg_sigint_handler(int signo) /* {{{ */
 } /* }}} */
 
 #ifndef _WIN32
-void phpdbg_signal_handler(int sig, siginfo_t *info, void *context) /* {{{ */
+static void phpdbg_signal_handler(int sig, siginfo_t *info, void *context) /* {{{ */
 {
 	int is_handled = FAILURE;
 
@@ -1066,7 +1066,7 @@ void phpdbg_signal_handler(int sig, siginfo_t *info, void *context) /* {{{ */
 } /* }}} */
 
 
-void phpdbg_sighup_handler(int sig) /* {{{ */
+static ZEND_NORETURN void phpdbg_sighup_handler(int sig) /* {{{ */
 {
 	exit(0);
 } /* }}} */
@@ -1085,7 +1085,7 @@ void phpdbg_free_wrapper(void *p ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC) /* {{
 		 * let's prevent it from segfault for now
 		 */
 	} else {
-		phpdbg_watch_efree(p);
+		phpdbg_watch_efree(p ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_ORIG_RELAY_CC);
 		_zend_mm_free(heap, p ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_ORIG_RELAY_CC);
 	}
 } /* }}} */
@@ -1146,17 +1146,17 @@ int main(int argc, char **argv) /* {{{ */
 	char *read_from_stdin = NULL;
 	zend_string *backup_phpdbg_compile = NULL;
 	bool show_help = 0, show_version = 0;
-	void* (*_malloc)(size_t);
-	void (*_free)(void*);
-	void* (*_realloc)(void*, size_t);
+	void* (*_malloc)(size_t ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC);
+	void (*_free)(void* ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC);
+	void* (*_realloc)(void*, size_t ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC);
 	php_stream_wrapper wrapper;
 	php_stream_wrapper_ops wops;
 
 #ifdef PHP_WIN32
 	_fmode = _O_BINARY;                 /* sets default for file streams to binary */
-	setmode(_fileno(stdin), O_BINARY);  /* make the stdio mode be binary */
-	setmode(_fileno(stdout), O_BINARY); /* make the stdio mode be binary */
-	setmode(_fileno(stderr), O_BINARY); /* make the stdio mode be binary */
+	_setmode(_fileno(stdin), O_BINARY);  /* make the stdio mode be binary */
+	_setmode(_fileno(stdout), O_BINARY); /* make the stdio mode be binary */
+	_setmode(_fileno(stderr), O_BINARY); /* make the stdio mode be binary */
 #else
 	struct sigaction signal_struct;
 	signal_struct.sa_sigaction = phpdbg_signal_handler;
@@ -1412,11 +1412,7 @@ phpdbg_main:
 		_free = phpdbg_watch_efree;
 
 		if (use_mm_wrappers) {
-#if ZEND_DEBUG
-			zend_mm_set_custom_debug_handlers(mm_heap, phpdbg_malloc_wrapper, phpdbg_free_wrapper, phpdbg_realloc_wrapper);
-#else
 			zend_mm_set_custom_handlers(mm_heap, phpdbg_malloc_wrapper, phpdbg_free_wrapper, phpdbg_realloc_wrapper);
-#endif
 		} else {
 			zend_mm_set_custom_handlers(mm_heap, _malloc, _free, _realloc);
 		}

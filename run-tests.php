@@ -75,9 +75,11 @@ Options:
 
     -s <file>   Write output to <file>.
 
-    -x          Sets 'SKIP_SLOW_TESTS' environmental variable.
+    -x          Sets 'SKIP_SLOW_TESTS' environment variable.
 
-    --offline   Sets 'SKIP_ONLINE_TESTS' environmental variable.
+    --online    Prevents setting the 'SKIP_ONLINE_TESTS' environment variable.
+
+    --offline   Sets 'SKIP_ONLINE_TESTS' environment variable (default).
 
     --verbose
     -v          Verbose mode.
@@ -355,6 +357,7 @@ function main(): void
     $num_repeats = 1;
     $show_progress = true;
     $ignored_by_ext = [];
+    $online = null;
 
     $cfgtypes = ['show', 'keep'];
     $cfgfiles = ['skip', 'php', 'clean', 'out', 'diff', 'exp', 'mem'];
@@ -553,8 +556,11 @@ function main(): void
                 case 'x':
                     $environment['SKIP_SLOW_TESTS'] = 1;
                     break;
+                case '--online':
+                    $online = true;
+                    break;
                 case '--offline':
-                    $environment['SKIP_ONLINE_TESTS'] = 1;
+                    $online = false;
                     break;
                 case '--shuffle':
                     $shuffle = true;
@@ -637,6 +643,13 @@ function main(): void
         }
     }
 
+    if ($online === null && !isset($environment['SKIP_ONLINE_TESTS'])) {
+        $online = false;
+    }
+    if ($online !== null) {
+        $environment['SKIP_ONLINE_TESTS'] = $online ? '0' : '1';
+    }
+
     if ($selected_tests && count($test_files) === 0) {
         echo "No tests found.\n";
         return;
@@ -682,13 +695,14 @@ function main(): void
     if ($test_cnt) {
         putenv('NO_INTERACTION=1');
         usort($test_files, "test_sort");
-        $start_time = time();
+        $start_timestamp = time();
+        $start_time = hrtime(true);
 
         echo "Running selected tests.\n";
 
         $test_idx = 0;
         run_all_tests($test_files, $environment);
-        $end_time = time();
+        $end_time = hrtime(true);
 
         if ($failed_tests_file) {
             fclose($failed_tests_file);
@@ -730,13 +744,14 @@ function main(): void
         $test_files = array_unique($test_files);
         usort($test_files, "test_sort");
 
-        $start_time = time();
-        show_start($start_time);
+        $start_timestamp = time();
+        $start_time = hrtime(true);
+        show_start($start_timestamp);
 
         $test_cnt = count($test_files);
         $test_idx = 0;
         run_all_tests($test_files, $environment);
-        $end_time = time();
+        $end_time = hrtime(true);
 
         if ($failed_tests_file) {
             fclose($failed_tests_file);
@@ -755,7 +770,7 @@ function main(): void
 
         compute_summary();
 
-        show_end($end_time);
+        show_end($start_timestamp, $start_time, $end_time);
         show_summary();
 
         save_results($output_file, /* prompt_to_save_results: */ true);
@@ -2322,7 +2337,9 @@ TEST $file
         }
 
         $env['CONTENT_LENGTH'] = strlen($request);
-        $env['REQUEST_METHOD'] = 'POST';
+        if (empty($env['REQUEST_METHOD'])) {
+            $env['REQUEST_METHOD'] = 'POST';
+        }
 
         if (empty($request)) {
             $junit->markTestAs('BORK', $shortname, $tested, null, 'empty $request');
@@ -3064,7 +3081,7 @@ Expected leak   : ' . sprintf('%5d (%5.1f%%)', $sum_results['XLEAKED'], $percent
     $summary .= '
 Tests passed    : ' . sprintf('%5d (%5.1f%%)', $sum_results['PASSED'], $percent_results['PASSED']) . ' ' . sprintf('(%5.1f%%)', $x_passed) . '
 ---------------------------------------------------------------------
-Time taken      : ' . sprintf('%5d seconds', $end_time - $start_time) . '
+Time taken      : ' . sprintf('%5.3f seconds', ($end_time - $start_time) / 1e9) . '
 =====================================================================
 ';
     $failed_test_summary = '';
@@ -3167,14 +3184,14 @@ EXPECTED LEAK TEST SUMMARY
     return $summary;
 }
 
-function show_start(int $start_time): void
+function show_start(int $start_timestamp): void
 {
-    echo "TIME START " . date('Y-m-d H:i:s', $start_time) . "\n=====================================================================\n";
+    echo "TIME START " . date('Y-m-d H:i:s', $start_timestamp) . "\n=====================================================================\n";
 }
 
-function show_end(int $end_time): void
+function show_end(int $start_timestamp, int|float $start_time, int|float $end_time): void
 {
-    echo "=====================================================================\nTIME END " . date('Y-m-d H:i:s', $end_time) . "\n";
+    echo "=====================================================================\nTIME END " . date('Y-m-d H:i:s', $start_timestamp + (int)(($end_time - $start_time)/1e9)) . "\n";
 }
 
 function show_summary(): void
@@ -4048,7 +4065,7 @@ final class Differ
         if ($cFrom === 1) {
             foreach ($to as $toV) {
                 if (($this->isEqual)($from[0], $toV)) {
-                    return [$from[0]];
+                    return [$toV];
                 }
             }
 
