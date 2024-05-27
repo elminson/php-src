@@ -136,7 +136,12 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_min, 0, 1, IS_MIXED, 0)
 	ZEND_ARG_VARIADIC_TYPE_INFO(0, values, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
 
-#define arginfo_max arginfo_min
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_min_with_key, 0, 1, IS_MIXED, 0)
+	ZEND_ARG_TYPE_INFO(0, value, IS_MIXED, 0)
+	ZEND_ARG_VARIADIC_TYPE_INFO(0, values, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
+
+#define arginfo_max arginfo_min arginfo_max_with_key arginfo_min_with_key
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_array_walk, 0, 2, IS_TRUE, 0)
 	ZEND_ARG_TYPE_MASK(1, array, MAY_BE_ARRAY|MAY_BE_OBJECT, NULL)
@@ -2218,6 +2223,18 @@ static const zend_frameless_function_info frameless_function_infos_max[] = {
 	{ 0 },
 };
 
+ZEND_FRAMELESS_FUNCTION(min_with_key, 2);
+static const zend_frameless_function_info frameless_function_infos_min_with_key[] = {
+	{ ZEND_FRAMELESS_FUNCTION_NAME(min_with_key, 2), 2 },
+	{ 0 },
+};
+
+ZEND_FRAMELESS_FUNCTION(max_with_key, 2);
+static const zend_frameless_function_info frameless_function_infos_max_with_key[] = {
+	{ ZEND_FRAMELESS_FUNCTION_NAME(max_with_key, 2), 2 },
+	{ 0 },
+};
+
 ZEND_FRAMELESS_FUNCTION(in_array, 2);
 ZEND_FRAMELESS_FUNCTION(in_array, 3);
 static const zend_frameless_function_info frameless_function_infos_in_array[] = {
@@ -2353,6 +2370,8 @@ ZEND_FUNCTION(current);
 ZEND_FUNCTION(key);
 ZEND_FUNCTION(min);
 ZEND_FUNCTION(max);
+ZEND_FUNCTION(min_with_key);
+ZEND_FUNCTION(max_with_key);
 ZEND_FUNCTION(array_walk);
 ZEND_FUNCTION(array_walk_recursive);
 ZEND_FUNCTION(in_array);
@@ -2978,6 +2997,8 @@ static const zend_function_entry ext_functions[] = {
 	ZEND_FE(key, arginfo_key)
 	ZEND_RAW_FENTRY("min", zif_min, arginfo_min, ZEND_ACC_COMPILE_TIME_EVAL, frameless_function_infos_min, NULL)
 	ZEND_RAW_FENTRY("max", zif_max, arginfo_max, ZEND_ACC_COMPILE_TIME_EVAL, frameless_function_infos_max, NULL)
+	ZEND_RAW_FENTRY("min_with_key", zif_min_with_key, arginfo_min_with_key, ZEND_ACC_COMPILE_TIME_EVAL, frameless_function_infos_min_with_key, NULL)
+    ZEND_RAW_FENTRY("max_with_key", zif_max_with_key, arginfo_max_with_key, ZEND_ACC_COMPILE_TIME_EVAL, frameless_function_infos_max_with_key, NULL)
 	ZEND_FE(array_walk, arginfo_array_walk)
 	ZEND_FE(array_walk_recursive, arginfo_array_walk_recursive)
 	ZEND_RAW_FENTRY("in_array", zif_in_array, arginfo_in_array, ZEND_ACC_COMPILE_TIME_EVAL, frameless_function_infos_in_array, NULL)

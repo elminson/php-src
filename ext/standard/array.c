@@ -1324,6 +1324,76 @@ generic_compare:
 	}
 }
 
+/* {{{ proto mixed min_with_key(array $values, callable $key)
+   Return the key and value of the element from the array that has the lowest value according to the specified key function */
+PHP_FUNCTION(min_with_key)
+{
+    zval *values;
+    zend_fcall_info fci_key = empty_fcall_info;
+    zend_fcall_info_cache fcc_key = empty_fcall_info_cache;
+
+    ZEND_PARSE_PARAMETERS_START(2, 2)
+        Z_PARAM_ARRAY(values)
+        Z_PARAM_FUNC(fci_key, fcc_key)
+    ZEND_PARSE_PARAMETERS_END();
+
+    HashTable *ht = Z_ARRVAL_P(values);
+    zval *entry;
+    zval retval;
+    zval *min_entry = NULL;
+    zend_string *string_key;
+    zend_ulong num_key;
+    int first = 1;
+
+    ZEND_HASH_FOREACH_KEY_VAL(ht, num_key, string_key, entry) {
+        zval args[1];
+        zval *params[1];
+        zend_try {
+            if (string_key) {
+                ZVAL_STR(&args[0], string_key);
+            } else {
+                ZVAL_LONG(&args[0], num_key);
+            }
+            params[0] = &args[0];
+
+            fci_key.params = params;
+            fci_key.param_count = 1;
+            fci_key.retval = &retval;
+
+            if (zend_call_function(&fci_key, &fcc_key) == SUCCESS) {
+                if (first || zend_is_true(zend_compare_objects(&retval, &min_entry, -1))) {
+                    if (min_entry) {
+                        zval_ptr_dtor(min_entry);
+                    }
+                    min_entry = entry;
+                    zval_add_ref(min_entry);
+                    first = 0;
+                }
+            } else {
+                zend_argument_type_error(2, "must be callable");
+                RETURN_THROWS();
+            }
+        } zend_catch {
+            zend_argument_type_error(2, "must be callable");
+            RETURN_THROWS();
+        } zend_end_try();
+    } ZEND_HASH_FOREACH_END();
+
+    if (min_entry) {
+        array_init(return_value);
+        add_next_index_zval(return_value, min_entry);
+        if (string_key) {
+            add_next_index_str(return_value, string_key);
+        } else {
+            add_next_index_long(return_value, num_key);
+        }
+    } else {
+        zend_argument_value_error(1, "must contain at least one element");
+        RETURN_THROWS();
+    }
+}
+/* }}} */
+
 /* {{{
  * proto mixed max(array values)
  * proto mixed max(mixed arg1 [, mixed arg2 [, mixed ...]])
@@ -1451,6 +1521,70 @@ generic_compare:
 		RETURN_COPY(zend_compare(lhs, rhs) >= 0 ? lhs : rhs);
 	}
 }
+
+/* {{{ proto mixed max_with_key(array $values, callable $key)
+   Return the element from the array that has the highest value according to the specified key function */
+PHP_FUNCTION(max_with_key)
+{
+    zval *values;
+    zend_fcall_info fci_key = empty_fcall_info;
+    zend_fcall_info_cache fcc_key = empty_fcall_info_cache;
+
+    ZEND_PARSE_PARAMETERS_START(2, 2)
+        Z_PARAM_ARRAY(values)
+        Z_PARAM_FUNC(fci_key, fcc_key)
+    ZEND_PARSE_PARAMETERS_END();
+
+    HashTable *ht = Z_ARRVAL_P(values);
+    zval *entry;
+    zval retval;
+    zval *max_entry = NULL;
+    zend_string *string_key;
+    zend_ulong num_key;
+    int first = 1;
+
+    ZEND_HASH_FOREACH_KEY_VAL(ht, num_key, string_key, entry) {
+        zval args[1];
+        zval *params[1];
+        zend_try {
+            if (string_key) {
+                ZVAL_STR(&args[0], string_key);
+            } else {
+                ZVAL_LONG(&args[0], num_key);
+            }
+            params[0] = &args[0];
+
+            fci_key.params = params;
+            fci_key.param_count = 1;
+            fci_key.retval = &retval;
+
+            if (zend_call_function(&fci_key, &fcc_key) == SUCCESS) {
+                if (first || zend_is_true(zend_compare_objects(&retval, &max_entry, 1))) {
+                    if (max_entry) {
+                        zval_ptr_dtor(max_entry);
+                    }
+                    max_entry = entry;
+                    zval_add_ref(max_entry);
+                    first = 0;
+                }
+            } else {
+                zend_argument_type_error(2, "must be callable");
+                RETURN_THROWS();
+            }
+        } zend_catch {
+            zend_argument_type_error(2, "must be callable");
+            RETURN_THROWS();
+        } zend_end_try();
+    } ZEND_HASH_FOREACH_END();
+
+    if (max_entry) {
+        RETURN_COPY(max_entry);
+    } else {
+        zend_argument_value_error(1, "must contain at least one element");
+        RETURN_THROWS();
+    }
+}
+/* }}} */
 
 typedef struct {
 	zend_fcall_info fci;
