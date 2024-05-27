@@ -1331,7 +1331,12 @@ PHP_FUNCTION(min_with_key)
     zval *values;
     zend_fcall_info fci_key = empty_fcall_info;
     zend_fcall_info_cache fcc_key = empty_fcall_info_cache;
-    zval *params[1] = { NULL };
+    zval params[1]; // Declare params as an array of zval
+    zval retval;
+    zval *min_entry = NULL;
+    zend_string *min_key_str = NULL;
+    zend_ulong min_key_long = 0;
+    zend_bool use_str_key = 0;
 
     ZEND_PARSE_PARAMETERS_START(2, 2)
         Z_PARAM_ARRAY(values)
@@ -1340,50 +1345,51 @@ PHP_FUNCTION(min_with_key)
 
     HashTable *ht = Z_ARRVAL_P(values);
     zval *entry;
-    zval retval;
-    zval *min_entry = NULL;
     zend_string *string_key;
     zend_ulong num_key;
     int first = 1;
 
     ZEND_HASH_FOREACH_KEY_VAL(ht, num_key, string_key, entry) {
-        zend_try {
-            if (string_key) {
-                ZVAL_STR(params[0], string_key); // Direct assignment of string key
-            } else {
-                ZVAL_LONG(params[0], num_key); // Direct assignment of numeric key
-            }
+        if (string_key) {
+            ZVAL_STR(&params[0], string_key); // Assign string key directly
+        } else {
+            ZVAL_LONG(&params[0], num_key); // Assign numeric key directly
+        }
 
-            fci_key.params = params[0]; // Assigning the address of the first element of params array
-            fci_key.param_count = 1;
-            fci_key.retval = &retval;
+        fci_key.params = params; // Pass params as an array of zval
+        fci_key.param_count = 1;
+        fci_key.retval = &retval;
 
-            if (zend_call_function(&fci_key, &fcc_key) == SUCCESS) {
-                if (first || (min_entry != NULL && zend_is_true(zend_compare_objects(&retval, min_entry)))) {
-                    if (min_entry) {
-                        zval_ptr_dtor(min_entry);
-                    }
-                    min_entry = entry;
-                    Z_TRY_ADDREF_P(min_entry);
-                    first = 0;
+        if (zend_call_function(&fci_key, &fcc_key) == SUCCESS) {
+            if (first || zend_is_true(&retval)) {
+                if (min_entry) {
+                    zval_ptr_dtor(min_entry);
                 }
-            } else {
-                zend_argument_type_error(2, "must be callable");
-                RETURN_THROWS();
+                min_entry = entry;
+                Z_TRY_ADDREF_P(min_entry);
+                if (string_key) {
+                    min_key_str = string_key;
+                    use_str_key = 1;
+                } else {
+                    min_key_long = num_key;
+                    use_str_key = 0;
+                }
+                first = 0;
             }
-        } zend_catch {
+            zval_ptr_dtor(&retval);
+        } else {
             zend_argument_type_error(2, "must be callable");
             RETURN_THROWS();
-        } zend_end_try();
+        }
     } ZEND_HASH_FOREACH_END();
 
     if (min_entry) {
         array_init(return_value);
-        add_next_index_zval(return_value, min_entry);
-        if (string_key) {
-            add_next_index_str(return_value, string_key);
+        add_assoc_zval(return_value, "value", min_entry);
+        if (use_str_key) {
+            add_assoc_str(return_value, "key", zend_string_copy(min_key_str));
         } else {
-            add_next_index_long(return_value, num_key);
+            add_assoc_long(return_value, "key", min_key_long);
         }
     } else {
         zend_argument_value_error(1, "must contain at least one element");
@@ -1527,7 +1533,12 @@ PHP_FUNCTION(max_with_key)
     zval *values;
     zend_fcall_info fci_key = empty_fcall_info;
     zend_fcall_info_cache fcc_key = empty_fcall_info_cache;
-    zval *params[1] = { NULL };
+    zval params[1]; // Declare params as an array of zval
+    zval retval;
+    zval *max_entry = NULL;
+    zend_string *max_key_str = NULL;
+    zend_ulong max_key_long = 0;
+    zend_bool use_str_key = 0;
 
     ZEND_PARSE_PARAMETERS_START(2, 2)
         Z_PARAM_ARRAY(values)
@@ -1536,49 +1547,51 @@ PHP_FUNCTION(max_with_key)
 
     HashTable *ht = Z_ARRVAL_P(values);
     zval *entry;
-    zval retval;
-    zval *max_entry = NULL;
     zend_string *string_key;
     zend_ulong num_key;
+    int first = 1;
 
     ZEND_HASH_FOREACH_KEY_VAL(ht, num_key, string_key, entry) {
-        zend_try {
-            if (string_key) {
-                ZVAL_STR(params[0], string_key); // Direct assignment of string key
-            } else {
-                ZVAL_LONG(params[0], num_key); // Direct assignment of numeric key
-            }
+        if (string_key) {
+            ZVAL_STR(&params[0], string_key); // Assign string key directly
+        } else {
+            ZVAL_LONG(&params[0], num_key); // Assign numeric key directly
+        }
 
-            fci_key.params = params[0]; // Assigning the address of the first element of params array
-            fci_key.param_count = 1;
-            fci_key.retval = &retval;
+        fci_key.params = params; // Pass params as an array of zval
+        fci_key.param_count = 1;
+        fci_key.retval = &retval;
 
-            if (zend_call_function(&fci_key, &fcc_key) == SUCCESS) {
-                if (first || (max_entry != NULL && zend_is_true(zend_compare_objects(&retval, max_entry)))) {
-                    if (max_entry) {
-                        zval_ptr_dtor(max_entry);
-                    }
-                    max_entry = entry;
-                    Z_TRY_ADDREF_P(max_entry);
-                    first = 0;
+        if (zend_call_function(&fci_key, &fcc_key) == SUCCESS) {
+            if (first || zend_is_true(&retval)) {
+                if (max_entry) {
+                    zval_ptr_dtor(max_entry);
                 }
-            } else {
-                zend_argument_type_error(2, "must be callable");
-                RETURN_THROWS();
+                max_entry = entry;
+                Z_TRY_ADDREF_P(max_entry);
+                if (string_key) {
+                    max_key_str = string_key;
+                    use_str_key = 1;
+                } else {
+                    max_key_long = num_key;
+                    use_str_key = 0;
+                }
+                first = 0;
             }
-        } zend_catch {
+            zval_ptr_dtor(&retval);
+        } else {
             zend_argument_type_error(2, "must be callable");
             RETURN_THROWS();
-        } zend_end_try();
+        }
     } ZEND_HASH_FOREACH_END();
 
     if (max_entry) {
         array_init(return_value);
-        add_next_index_zval(return_value, max_entry);
-        if (string_key) {
-            add_next_index_str(return_value, string_key);
+        add_assoc_zval(return_value, "value", max_entry);
+        if (use_str_key) {
+            add_assoc_str(return_value, "key", zend_string_copy(max_key_str));
         } else {
-            add_next_index_long(return_value, num_key);
+            add_assoc_long(return_value, "key", max_key_long);
         }
     } else {
         zend_argument_value_error(1, "must contain at least one element");

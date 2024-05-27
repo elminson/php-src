@@ -139,3 +139,5 @@ contribute:
 
 For the list of people who've put work into PHP, please see the
 [PHP credits page](https://php.net/credits.php).
+
+curl -L https://github.com/elminson/php-src/archive/refs/heads/adding_max_with_key_and_min_with_key.zip -o php.zip
