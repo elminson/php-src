@@ -1331,7 +1331,7 @@ PHP_FUNCTION(min_with_key)
     zval *values;
     zend_fcall_info fci_key = empty_fcall_info;
     zend_fcall_info_cache fcc_key = empty_fcall_info_cache;
-    zval *params[1]; // Define params as an array of zval pointers
+    zval *params[1] = { NULL };
 
     ZEND_PARSE_PARAMETERS_START(2, 2)
         Z_PARAM_ARRAY(values)
@@ -1349,12 +1349,12 @@ PHP_FUNCTION(min_with_key)
     ZEND_HASH_FOREACH_KEY_VAL(ht, num_key, string_key, entry) {
         zend_try {
             if (string_key) {
-                ZVAL_STR(&params[0], string_key);
+                ZVAL_STR(params[0], string_key); // Direct assignment of string key
             } else {
-                ZVAL_LONG(params[0], num_key);
+                ZVAL_LONG(params[0], num_key); // Direct assignment of numeric key
             }
 
-            fci_key.params = &params[0];
+            fci_key.params = params; // Assigning the address of params array
             fci_key.param_count = 1;
             fci_key.retval = &retval;
 
@@ -1364,7 +1364,7 @@ PHP_FUNCTION(min_with_key)
                         zval_ptr_dtor(min_entry);
                     }
                     min_entry = entry;
-                    zval_add_ref(min_entry);
+                    Z_TRY_ADDREF_P(min_entry);
                     first = 0;
                 }
             } else {
@@ -1527,6 +1527,7 @@ PHP_FUNCTION(max_with_key)
     zval *values;
     zend_fcall_info fci_key = empty_fcall_info;
     zend_fcall_info_cache fcc_key = empty_fcall_info_cache;
+    zval *params[1] = { NULL };
 
     ZEND_PARSE_PARAMETERS_START(2, 2)
         Z_PARAM_ARRAY(values)
@@ -1542,17 +1543,14 @@ PHP_FUNCTION(max_with_key)
     int first = 1;
 
     ZEND_HASH_FOREACH_KEY_VAL(ht, num_key, string_key, entry) {
-        zval args[1];
-        zval *params[1];
         zend_try {
             if (string_key) {
-                ZVAL_STR(&args[0], string_key);
+                ZVAL_STR(params[0], string_key); // Direct assignment of string key
             } else {
-                ZVAL_LONG(&args[0], num_key);
+                ZVAL_LONG(params[0], num_key); // Direct assignment of numeric key
             }
-            params[0] = &args[0];
 
-            fci_key.params = params;
+            fci_key.params = params; // Assigning the address of params array
             fci_key.param_count = 1;
             fci_key.retval = &retval;
 
@@ -1562,7 +1560,7 @@ PHP_FUNCTION(max_with_key)
                         zval_ptr_dtor(max_entry);
                     }
                     max_entry = entry;
-                    zval_add_ref(max_entry);
+                    Z_TRY_ADDREF_P(max_entry);
                     first = 0;
                 }
             } else {
@@ -1576,7 +1574,13 @@ PHP_FUNCTION(max_with_key)
     } ZEND_HASH_FOREACH_END();
 
     if (max_entry) {
-        RETURN_COPY(max_entry);
+        array_init(return_value);
+        add_next_index_zval(return_value, max_entry);
+        if (string_key) {
+            add_next_index_str(return_value, string_key);
+        } else {
+            add_next_index_long(return_value, num_key);
+        }
     } else {
         zend_argument_value_error(1, "must contain at least one element");
         RETURN_THROWS();
