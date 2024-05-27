@@ -1331,6 +1331,7 @@ PHP_FUNCTION(min_with_key)
     zval *values;
     zend_fcall_info fci_key = empty_fcall_info;
     zend_fcall_info_cache fcc_key = empty_fcall_info_cache;
+    zval *params[1]; // Define params as an array of zval pointers
 
     ZEND_PARSE_PARAMETERS_START(2, 2)
         Z_PARAM_ARRAY(values)
@@ -1346,17 +1347,14 @@ PHP_FUNCTION(min_with_key)
     int first = 1;
 
     ZEND_HASH_FOREACH_KEY_VAL(ht, num_key, string_key, entry) {
-        zval args[1];
-        zval *params[1];
         zend_try {
             if (string_key) {
-                ZVAL_STR(&args[0], string_key);
+                ZVAL_STR(&params[0], string_key);
             } else {
-                ZVAL_LONG(&args[0], num_key);
+                ZVAL_LONG(&params[0], num_key);
             }
-            params[0] = &args[0];
 
-            fci_key.params = params;
+            fci_key.params = params; // Assign params directly to fci_key.params
             fci_key.param_count = 1;
             fci_key.retval = &retval;
 
