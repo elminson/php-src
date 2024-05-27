@@ -1354,12 +1354,12 @@ PHP_FUNCTION(min_with_key)
                 ZVAL_LONG(params[0], num_key); // Direct assignment of numeric key
             }
 
-            fci_key.params = params; // Assigning the address of params array
+            fci_key.params = &params[0]; // Assigning the address of the first element of params array
             fci_key.param_count = 1;
             fci_key.retval = &retval;
 
             if (zend_call_function(&fci_key, &fcc_key) == SUCCESS) {
-                if (first || zend_is_true(zend_compare_objects(&retval, min_entry))) {
+                if (first || (min_entry && zend_is_true(zend_compare_objects(&retval, min_entry)))) {
                     if (min_entry) {
                         zval_ptr_dtor(min_entry);
                     }
@@ -1550,12 +1550,12 @@ PHP_FUNCTION(max_with_key)
                 ZVAL_LONG(params[0], num_key); // Direct assignment of numeric key
             }
 
-            fci_key.params = params; // Assigning the address of params array
+            fci_key.params = params[0]; // Assigning the address of the first element of params array
             fci_key.param_count = 1;
             fci_key.retval = &retval;
 
             if (zend_call_function(&fci_key, &fcc_key) == SUCCESS) {
-                if (first || zend_is_true(zend_compare_objects(&retval, max_entry))) {
+                if (first || (max_entry != NULL && zend_is_true(zend_compare_objects(&retval, max_entry)))) {
                     if (max_entry) {
                         zval_ptr_dtor(max_entry);
                     }
