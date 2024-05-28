@@ -1215,7 +1215,7 @@ PHP_FUNCTION(min)
 			zend_argument_type_error(1, "must be of type array, %s given", zend_zval_value_name(&args[0]));
 			RETURN_THROWS();
 		} else {
-			zval *result = zend_hash_minmax(Z_ARRVAL(args[0]), php_data_compare, 0);
+			zval *result = zend_hash_minmax(Z_ARRVAL(args[0]), php_data_compare, 0, 0);
 			if (result) {
 				RETURN_COPY_DEREF(result);
 			} else {
@@ -1341,7 +1341,7 @@ PHP_FUNCTION(min_with_key)
     			zend_argument_type_error(1, "must be of type array, %s given", zend_zval_value_name(&args[0]));
     			RETURN_THROWS();
     		} else {
-    			zval *result = zend_hash_minmax(Z_ARRVAL(args[0]), php_data_compare, 0);
+    			zval *result = zend_hash_minmax(Z_ARRVAL(args[0]), php_data_compare, 0, 1);
     			if (result) {
     				RETURN_COPY_DEREF(result);
     			} else {
@@ -1469,7 +1469,7 @@ PHP_FUNCTION(max)
 			zend_argument_type_error(1, "must be of type array, %s given", zend_zval_value_name(&args[0]));
 			RETURN_THROWS();
 		} else {
-			zval *result = zend_hash_minmax(Z_ARRVAL(args[0]), php_data_compare, 1);
+			zval *result = zend_hash_minmax(Z_ARRVAL(args[0]), php_data_compare, 1, 0);
 			if (result) {
 				RETURN_COPY_DEREF(result);
 			} else {
@@ -1595,7 +1595,7 @@ PHP_FUNCTION(max_with_key)
     			zend_argument_type_error(1, "must be of type array, %s given", zend_zval_value_name(&args[0]));
     			RETURN_THROWS();
     		} else {
-    			zval *result = zend_hash_minmax(Z_ARRVAL(args[0]), php_data_compare, 1);
+    			zval *result = zend_hash_minmax(Z_ARRVAL(args[0]), php_data_compare, 1, 1);
     			if (result) {
     				RETURN_COPY_DEREF(result);
     			} else {
