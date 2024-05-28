@@ -31,7 +31,7 @@ var_dump(min_with_key(true, false, true));
 var_dump(min_with_key(1, true, false, true));
 var_dump(min_with_key(0, true, false, true));
 
-var_dump(min_with_key(['a' => 1, 'b' => 4, 'c' => -2]);
+var_dump(min_with_key(['a' => 1, 'b' => 4, 'c' => -2]));
 
 ?>
 --EXPECT--
@@ -45,4 +45,4 @@ bool(false)
 bool(false)
 bool(false)
 int(0)
-array('c' => -2)
+int(-2)
