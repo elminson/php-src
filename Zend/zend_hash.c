@@ -3186,7 +3186,7 @@ ZEND_API int zend_hash_compare(HashTable *ht1, HashTable *ht2, compare_func_t co
 }
 
 
-ZEND_API zval* ZEND_FASTCALL zend_hash_minmax(const HashTable *ht, compare_func_t compar, uint32_t flag)
+ZEND_API zval* ZEND_FASTCALL zend_hash_minmax(const HashTable *ht, compare_func_t compar, uint32_t flag, uint32_t with_key)
 {
 	uint32_t idx;
 	zval *res;
@@ -3250,6 +3250,11 @@ ZEND_API zval* ZEND_FASTCALL zend_hash_minmax(const HashTable *ht, compare_func_
 			}
 		}
 	}
+
+	if (with_key) {
+	    //return [idx, res];
+    }
+
 	return res;
 }
 

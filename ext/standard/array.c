@@ -1215,7 +1215,7 @@ PHP_FUNCTION(min)
 			zend_argument_type_error(1, "must be of type array, %s given", zend_zval_value_name(&args[0]));
 			RETURN_THROWS();
 		} else {
-			zval *result = zend_hash_minmax(Z_ARRVAL(args[0]), php_data_compare, 0);
+			zval *result = zend_hash_minmax(Z_ARRVAL(args[0]), php_data_compare, 0, 0);
 			if (result) {
 				RETURN_COPY_DEREF(result);
 			} else {
@@ -1324,6 +1324,132 @@ generic_compare:
 	}
 }
 
+/* {{{ proto mixed min_with_key(array $values, callable $key)
+   Return the key and value of the element from the array that has the lowest value according to the specified key function */
+PHP_FUNCTION(min_with_key)
+{
+    uint32_t argc;
+    	zval *args = NULL;
+
+    	ZEND_PARSE_PARAMETERS_START(1, -1)
+    		Z_PARAM_VARIADIC('+', args, argc)
+    	ZEND_PARSE_PARAMETERS_END();
+
+    	/* mixed min ( array $values ) */
+    	if (argc == 1) {
+    		if (Z_TYPE(args[0]) != IS_ARRAY) {
+    			zend_argument_type_error(1, "must be of type array, %s given", zend_zval_value_name(&args[0]));
+    			RETURN_THROWS();
+    		} else {
+    			zval *result = zend_hash_minmax(Z_ARRVAL(args[0]), php_data_compare, 0, 1);
+    			if (result) {
+    				RETURN_COPY_DEREF(result);
+    			} else {
+    				zend_argument_value_error(1, "must contain at least one element");
+    				RETURN_THROWS();
+    			}
+    		}
+    	} else {
+    		/* mixed min ( mixed $value1 , mixed $value2 [, mixed $value3... ] ) */
+    		zval *min;
+    		uint32_t i;
+
+    		min = &args[0];
+    		zend_long min_lval;
+    		double min_dval;
+
+    		if (Z_TYPE_P(min) == IS_LONG) {
+    			min_lval = Z_LVAL_P(min);
+
+    			for (i = 1; i < argc; i++) {
+    				if (EXPECTED(Z_TYPE(args[i]) == IS_LONG)) {
+    					if (min_lval > Z_LVAL(args[i])) {
+    						min_lval = Z_LVAL(args[i]);
+    						min = &args[i];
+    					}
+    				} else if (Z_TYPE(args[i]) == IS_DOUBLE && (zend_dval_to_lval((double) min_lval) == min_lval)) {
+    					/* if min_lval can be exactly represented as a double, go to double dedicated code */
+    					min_dval = (double) min_lval;
+    					goto double_compare;
+    				} else {
+    					goto generic_compare;
+    				}
+    			}
+
+    			RETURN_LONG(min_lval);
+    		} else if (Z_TYPE_P(min) == IS_DOUBLE) {
+    			min_dval = Z_DVAL_P(min);
+
+    			for (i = 1; i < argc; i++) {
+    				if (EXPECTED(Z_TYPE(args[i]) == IS_DOUBLE)) {
+    					double_compare:
+    					if (min_dval > Z_DVAL(args[i])) {
+    						min_dval = Z_DVAL(args[i]);
+    						min = &args[i];
+    					}
+    				} else if (Z_TYPE(args[i]) == IS_LONG && (zend_dval_to_lval((double) Z_LVAL(args[i])) == Z_LVAL(args[i]))) {
+    					/* if the value can be exactly represented as a double, use double dedicated code otherwise generic */
+    					if (min_dval > (double)Z_LVAL(args[i])) {
+    						min_dval = (double)Z_LVAL(args[i]);
+    						min = &args[i];
+    					}
+    				} else {
+    					goto generic_compare;
+    				}
+    			}
+    		} else {
+    			for (i = 1; i < argc; i++) {
+    				generic_compare:
+    				if (zend_compare(&args[i], min) < 0) {
+    					min = &args[i];
+    				}
+    			}
+    		}
+
+    		RETURN_COPY(min);
+    	}
+}
+/* }}} */
+
+ZEND_FRAMELESS_FUNCTION(min_with_key, 2)
+{
+	zval *lhs, *rhs;
+
+	Z_FLF_PARAM_ZVAL(1, lhs);
+	Z_FLF_PARAM_ZVAL(2, rhs);
+
+	double lhs_dval;
+
+	if (Z_TYPE_P(lhs) == IS_LONG) {
+		zend_long lhs_lval = Z_LVAL_P(lhs);
+
+		if (EXPECTED(Z_TYPE_P(rhs) == IS_LONG)) {
+			RETURN_COPY_VALUE(lhs_lval < Z_LVAL_P(rhs) ? lhs : rhs);
+		} else if (Z_TYPE_P(rhs) == IS_DOUBLE && (zend_dval_to_lval((double) lhs_lval) == lhs_lval)) {
+			/* if lhs_lval can be exactly represented as a double, go to double dedicated code */
+			lhs_dval = (double) lhs_lval;
+			goto double_compare;
+		} else {
+			goto generic_compare;
+		}
+	} else if (Z_TYPE_P(lhs) == IS_DOUBLE) {
+		lhs_dval = Z_DVAL_P(lhs);
+
+		if (EXPECTED(Z_TYPE_P(rhs) == IS_DOUBLE)) {
+double_compare:
+			RETURN_COPY_VALUE(lhs_dval < Z_DVAL_P(rhs) ? lhs : rhs);
+		} else if (Z_TYPE_P(rhs) == IS_LONG && (zend_dval_to_lval((double) Z_LVAL_P(rhs)) == Z_LVAL_P(rhs))) {
+			/* if the value can be exactly represented as a double, use double dedicated code otherwise generic */
+			RETURN_COPY_VALUE(lhs_dval < (double)Z_LVAL_P(rhs) ? lhs : rhs);
+		} else {
+			goto generic_compare;
+		}
+	} else {
+generic_compare:
+		RETURN_COPY(zend_compare(lhs, rhs) < 0 ? lhs : rhs);
+	}
+}
+
 /* {{{
  * proto mixed max(array values)
  * proto mixed max(mixed arg1 [, mixed arg2 [, mixed ...]])
@@ -1343,7 +1469,7 @@ PHP_FUNCTION(max)
 			zend_argument_type_error(1, "must be of type array, %s given", zend_zval_value_name(&args[0]));
 			RETURN_THROWS();
 		} else {
-			zval *result = zend_hash_minmax(Z_ARRVAL(args[0]), php_data_compare, 1);
+			zval *result = zend_hash_minmax(Z_ARRVAL(args[0]), php_data_compare, 1, 0);
 			if (result) {
 				RETURN_COPY_DEREF(result);
 			} else {
@@ -1414,6 +1540,133 @@ PHP_FUNCTION(max)
 /* }}} */
 
 ZEND_FRAMELESS_FUNCTION(max, 2)
+{
+	zval *lhs, *rhs;
+
+	Z_FLF_PARAM_ZVAL(1, lhs);
+	Z_FLF_PARAM_ZVAL(2, rhs);
+
+	double lhs_dval;
+
+	if (Z_TYPE_P(lhs) == IS_LONG) {
+		zend_long lhs_lval = Z_LVAL_P(lhs);
+
+		if (EXPECTED(Z_TYPE_P(rhs) == IS_LONG)) {
+			RETURN_COPY_VALUE(lhs_lval >= Z_LVAL_P(rhs) ? lhs : rhs);
+		} else if (Z_TYPE_P(rhs) == IS_DOUBLE && (zend_dval_to_lval((double) lhs_lval) == lhs_lval)) {
+			/* if lhs_lval can be exactly represented as a double, go to double dedicated code */
+			lhs_dval = (double) lhs_lval;
+			goto double_compare;
+		} else {
+			goto generic_compare;
+		}
+	} else if (Z_TYPE_P(lhs) == IS_DOUBLE) {
+		lhs_dval = Z_DVAL_P(lhs);
+
+		if (EXPECTED(Z_TYPE_P(rhs) == IS_DOUBLE)) {
+double_compare:
+			RETURN_COPY_VALUE(lhs_dval >= Z_DVAL_P(rhs) ? lhs : rhs);
+		} else if (Z_TYPE_P(rhs) == IS_LONG && (zend_dval_to_lval((double) Z_LVAL_P(rhs)) == Z_LVAL_P(rhs))) {
+			/* if the value can be exactly represented as a double, use double dedicated code otherwise generic */
+			RETURN_COPY_VALUE(lhs_dval >= (double)Z_LVAL_P(rhs) ? lhs : rhs);
+		} else {
+			goto generic_compare;
+		}
+	} else {
+generic_compare:
+		RETURN_COPY(zend_compare(lhs, rhs) >= 0 ? lhs : rhs);
+	}
+}
+
+/* {{{ proto mixed max_with_key(array $values, callable $key)
+   Return the element from the array that has the highest value according to the specified key function */
+PHP_FUNCTION(max_with_key)
+{
+    	zval *args = NULL;
+    	uint32_t argc;
+
+    	ZEND_PARSE_PARAMETERS_START(1, -1)
+    		Z_PARAM_VARIADIC('+', args, argc)
+    	ZEND_PARSE_PARAMETERS_END();
+
+    	/* mixed max ( array $values ) */
+    	if (argc == 1) {
+    		if (Z_TYPE(args[0]) != IS_ARRAY) {
+    			zend_argument_type_error(1, "must be of type array, %s given", zend_zval_value_name(&args[0]));
+    			RETURN_THROWS();
+    		} else {
+    			zval *result = zend_hash_minmax(Z_ARRVAL(args[0]), php_data_compare, 1, 1);
+    			if (result) {
+    				RETURN_COPY_DEREF(result);
+    			} else {
+    				zend_argument_value_error(1, "must contain at least one element");
+    				RETURN_THROWS();
+    			}
+    		}
+    	} else {
+    		/* mixed max ( mixed $value1 , mixed $value2 [, mixed $value3... ] ) */
+    		zval *max;
+    		uint32_t i;
+
+    		max = &args[0];
+    		zend_long max_lval;
+    		double max_dval;
+
+    		if (Z_TYPE_P(max) == IS_LONG) {
+    			max_lval = Z_LVAL_P(max);
+
+    			for (i = 1; i < argc; i++) {
+    				if (EXPECTED(Z_TYPE(args[i]) == IS_LONG)) {
+    					if (max_lval < Z_LVAL(args[i])) {
+    						max_lval = Z_LVAL(args[i]);
+    						max = &args[i];
+    					}
+    				} else if (Z_TYPE(args[i]) == IS_DOUBLE && (zend_dval_to_lval((double) max_lval) == max_lval)) {
+    					/* if max_lval can be exactly represented as a double, go to double dedicated code */
+    					max_dval = (double) max_lval;
+    					goto double_compare;
+    				} else {
+    					goto generic_compare;
+    				}
+    			}
+
+    			RETURN_LONG(max_lval);
+    		} else if (Z_TYPE_P(max) == IS_DOUBLE) {
+    			max_dval = Z_DVAL_P(max);
+
+    			for (i = 1; i < argc; i++) {
+    				if (EXPECTED(Z_TYPE(args[i]) == IS_DOUBLE)) {
+    					double_compare:
+    					if (max_dval < Z_DVAL(args[i])) {
+    						max_dval = Z_DVAL(args[i]);
+    						max = &args[i];
+    					}
+    				} else if (Z_TYPE(args[i]) == IS_LONG && (zend_dval_to_lval((double) Z_LVAL(args[i])) == Z_LVAL(args[i]))) {
+    					/* if the value can be exactly represented as a double, use double dedicated code otherwise generic */
+    					if (max_dval < (double)Z_LVAL(args[i])) {
+    						max_dval = (double)Z_LVAL(args[i]);
+    						max = &args[i];
+    					}
+    				} else {
+    					goto generic_compare;
+    				}
+    			}
+    		} else {
+    			for (i = 1; i < argc; i++) {
+    				generic_compare:
+    				if (zend_compare(&args[i], max) > 0) {
+    					max = &args[i];
+    				}
+    			}
+    		}
+
+    		RETURN_COPY(max);
+    	}
+}
+/* }}} */
+
+
+ZEND_FRAMELESS_FUNCTION(max_with_key, 2)
 {
 	zval *lhs, *rhs;
 
